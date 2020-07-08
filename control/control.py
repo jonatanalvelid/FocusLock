@@ -7,7 +7,6 @@ import time
 # Scientific python packages and software imports
 from pyqtgraph.Qt import QtCore, QtGui
 from pyqtgraph.dockarea import Dock, DockArea
-from lantz import Q_
 
 # Tempesta control imports
 import control.focus as focus
