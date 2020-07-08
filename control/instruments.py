@@ -75,14 +75,17 @@ class CameraTIS(mockers.MockHamamatsu):
         # y_size = self.properties['subarray_vsize']
         # x_size = self.properties['subarray_hsize']
         # now = time.time()
-        # Old way: averaging the RGB image to a grayscale. Very slow for the big camera (2480x2048).
+        
+        # get RGB image, want grayscale
+        # Old: averaging the RGB image to a grayscale. Very slow for the big camera (2480x2048).
         #frame = np.average(frame, 2)
-#        print(type(frame))
-#        print(frame)
+        #print(type(frame))
+        #print(frame)
+        
         # Improved: Take the R-component (from RGB), this should contain most information.
         frame = np.array(frame[0], dtype='float64')
-        # Check if below is giving the right dimensions out
         frame = np.reshape(frame,(self.properties['subarray_vsize'],self.properties['subarray_hsize'],3))[:,:,0]
+        
         # print(frame)
         # now = time.time()
         # print("Avg RGB took: ", now-then, " seconds")

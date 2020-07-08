@@ -38,30 +38,6 @@ class TempestaFocusLockGUI(QtGui.QMainWindow):
 
         self.filewarning = FileWarning()
 
-        """
-        # Actions in menubar
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('&File')
-
-        self.savePresetAction = QtGui.QAction('Save configuration...', self)
-        self.savePresetAction.setShortcut('Ctrl+S')
-        self.savePresetAction.setStatusTip('Save camera & recording settings')
-        savePresetFunction = lambda: guitools.savePreset(self)
-        self.savePresetAction.triggered.connect(savePresetFunction)
-        fileMenu.addAction(self.savePresetAction)
-        fileMenu.addSeparator()
-
-        # Potentially remove all this?
-        self.presetsMenu = QtGui.QComboBox()
-        self.presetDir = datapath
-        if not(os.path.isdir(self.presetDir)):
-            self.presetDir = os.path.join(os.getcwd(), 'control\\Presets')
-        for preset in os.listdir(self.presetDir):
-            self.presetsMenu.addItem(preset)
-        self.loadPresetButton = QtGui.QPushButton('Load preset')
-        loadPresetFunction = lambda: guitools.loadPreset(self)
-        self.loadPresetButton.pressed.connect(loadPresetFunction)
-        """
         # Dock widget
         dockArea = DockArea()
 

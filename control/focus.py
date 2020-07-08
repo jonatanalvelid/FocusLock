@@ -350,7 +350,8 @@ class FocusWidget(QtGui.QFrame):
                               self.processDataThread.focusSignal -
                               self.setPoint])
 
-        statData = f'std = {self.std:.3}; max_dev = {self.max_dev:.3}'
+        statData = 'std = {}; max_dev = {}'.format(np.round(self.std,3),
+                                                   np.round(self.max_dev,3))
         self.focusLockGraph.statistics.setText(statData)
 
         self.n += 1
