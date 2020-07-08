@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Oct 1 13:41:48 2014
-
-@authors: Federico Barabas, Luciano Masullo, Shusei Masuda, Jonatan Alvelid
-"""
 
 import numpy as np
 import time
@@ -22,15 +17,15 @@ import control.instruments as instruments
 
 class FocusWidget(QtGui.QFrame):
 
-    def __init__(self, scanZ, webcam, imspector, main=None, *args, **kwargs):
+    def __init__(self, scan_z, webcam, main=None, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
         self.setMinimumSize(200, 350)  # Set the minimum size of the widget
 
         self.main = main
-        self.z = scanZ
+        self.z = scan_z
         self.webcam = webcam
-        self.imspector = imspector
+        self.imspector = None  # for z-stack implementation
         self.setPoint = 0
         self.focuspoints = np.zeros(10)
         self.calibrationResult = [0, 0]
@@ -52,7 +47,6 @@ class FocusWidget(QtGui.QFrame):
         self.noStepVar = True
         self.countrows = 0
 
-        self.V = Q_(1, 'V')
         self.um = Q_(1, 'um')
         self.nm = Q_(1, 'nm')
 
@@ -69,7 +63,7 @@ class FocusWidget(QtGui.QFrame):
         self.lockButton.setSizePolicy(QtGui.QSizePolicy.Preferred,
                                       QtGui.QSizePolicy.Expanding)
 
-        self.zStackBox = QtGui.QCheckBox('Z-stack')
+#        self.zStackBox = QtGui.QCheckBox('Z-stack')
         self.twoFociBox = QtGui.QCheckBox('Two foci')
 
         self.zStepFromLabel = QtGui.QLabel('Min step [nm]')
@@ -83,7 +77,6 @@ class FocusWidget(QtGui.QFrame):
 
         # PZT position widgets
         self.positionLabel = QtGui.QLabel('Position[um]')
-#        self.positionEdit = QtGui.QLineEdit(str(self.z.absZ).split(' ')[0])
         self.positionEdit = QtGui.QLineEdit('50')
         self.positionSetButton = QtGui.QPushButton('Set')
         self.positionSetButton.clicked.connect(self.movePZT)
@@ -136,7 +129,7 @@ class FocusWidget(QtGui.QFrame):
         grid.addWidget(self.kiLabel, 2, 3)
         grid.addWidget(self.kiEdit, 2, 4)
         grid.addWidget(self.lockButton, 1, 5, 2, 1)
-        grid.addWidget(self.zStackBox, 4, 2)
+#        grid.addWidget(self.zStackBox, 4, 2)
         grid.addWidget(self.twoFociBox, 4, 6)
         grid.addWidget(self.zStepFromLabel, 3, 4)
         grid.addWidget(self.zStepFromEdit, 4, 4)
@@ -157,7 +150,7 @@ class FocusWidget(QtGui.QFrame):
 #        grid.setColumnMinimumWidth(2, 40)
 #        grid.setColumnMinimumWidth(0, 100)
 
-        self.zStackBox.stateChanged.connect(self.zStackVarChange)
+#        self.zStackBox.stateChanged.connect(self.zStackVarChange)
         self.twoFociBox.stateChanged.connect(self.twoFociVarChange)
 
     def __call__(self):
@@ -179,14 +172,14 @@ class FocusWidget(QtGui.QFrame):
         else:
             self.unlockFocus()
             self.lockButton.setText('Lock')
-
+    """
     def zStackVarChange(self):
         if self.zStackVar:
-            # Do all the things needed to be done when you finish end a z-stack
+            # finish a z-stack
             self.zStackVar = False
             self.imspector.disconnect_end(self,1)
         else:
-            # Do all the things needed to be done when you start end a z-stack
+            # start a z-stack
             self.zStackVar = True
             self.countrows = 0
             
@@ -207,6 +200,7 @@ class FocusWidget(QtGui.QFrame):
             else:
                 print('Axises in Imspector are not properly set-up for a z-stack. Double check you settings.')
                 return
+    """
 
     def twoFociVarChange(self):
         if self.twoFociVar:
@@ -308,7 +302,7 @@ class FocusWidget(QtGui.QFrame):
             self.aboutToLock = True
         else:
             self.lockFocusSetPos(newFocusPos)
-
+    """
     def ZStep(self, newFocusPos=False):
         # Call this function whenever there is a z-stack step about to be taken. Lock the focus in a new position.
         # Do it at a sensed new position, as a z-step. 
@@ -319,7 +313,7 @@ class FocusWidget(QtGui.QFrame):
         self.zsteptime = self.t0-self.t1
         self.t1 = self.t0
         self.noStepVar = False
-            
+    """
     def getFocusPosition(self):
         # Return the current focus locked spot position
         return self.setPoint
@@ -356,8 +350,7 @@ class FocusWidget(QtGui.QFrame):
                               self.processDataThread.focusSignal -
                               self.setPoint])
 
-        statData = 'std = {}    max_dev = {}'.format(np.round(self.std, 3),
-                                                     np.round(self.max_dev, 3))
+        statData = f'std = {self.std:.3}; max_dev = {self.max_dev:.3}'
         self.focusLockGraph.statistics.setText(statData)
 
         self.n += 1
@@ -376,14 +369,6 @@ class ProcessDataThread(QtCore.QThread):
         super().__init__(*args, **kwargs)
         self.focusWidget = focusWidget
         # set the camera
-        """
-        uc480 camera
-
-        default exposureTime: 10 ms
-                vsub: 1024 pix
-                hsub: 1280 pix
-                exp. time *u.ms
-        """
         self.webcam = self.focusWidget.webcam
         self.ws = {'vsub': 4, 'hsub': 4,
                    'top': None, 'bot': None,
@@ -415,11 +400,6 @@ class ProcessDataThread(QtCore.QThread):
         # update the focus signal
         # print('Updating focus signal...')
         try:
-            # self.image = self.webcam.grab_image(vsub=self.ws['vsub'],
-            #                                     hsub=self.ws['hsub'],
-            #                                     top=self.ws['top'],
-            #                                     bot=self.ws['bot'])
-#            then = time.time()
             self.image = self.webcam.grab_image()
 #            now = time.time()
 #            print("Focus: Whole grab image took:", now-then, "seconds.")
@@ -433,11 +413,12 @@ class ProcessDataThread(QtCore.QThread):
 #        print(np.size(imagearray))
 #        print(np.shape(imagearray))
         imagearray = imagearray[0:1024,730:830]
-        imagearray = np.swapaxes(imagearray,0,1)      # Swap matrix axes, after having turned the camera 90deg
+        imagearray = np.swapaxes(imagearray,0,1)  # if turning the camera 90 deg
         # imagearraygf = imagearray
-        imagearraygf = ndi.filters.gaussian_filter(imagearray,7)     # Gaussian filter the image, to remove noise and so on, to get a better center estimate
+        imagearraygf = ndi.filters.gaussian_filter(imagearray,7)  # Gaussian filter the image, to remove noise and get a better center estimate
 
         if self.focusWidget.twoFociVar:
+            # if there is two reflected spots on the camera of ~equal intensity
             allmaxcoords = peak_local_max(imagearraygf, min_distance=60)
 #            print(allmaxcoords)
             size = allmaxcoords.shape
@@ -471,10 +452,7 @@ class ProcessDataThread(QtCore.QThread):
         xhigh = min(1024,(centercoords2[0]+subsizex))
         ylow = max(0,(centercoords2[1]-subsizey))
         yhigh = min(1280,(centercoords2[1]+subsizey))
-        #print(xlow)
-        #print(xhigh)
-        #print(ylow)
-        #print(yhigh)
+        #print(xlow); print(xhigh); print(ylow); print(yhigh)
         imagearraygfsub = imagearraygf[xlow:xhigh,ylow:yhigh]
         #imagearraygfsub = imagearraygf[xlow:xhigh,:]
         #imagearraygfsubtest = imagearraygf
@@ -487,10 +465,10 @@ class ProcessDataThread(QtCore.QThread):
         #self.massCenter2 = np.array(ndi.measurements.center_of_mass(imagearraygfsubtest))
         # self.massCenterGlobal[0] = self.massCenter[0] #+ centercoords2[0] #- subsizex - self.sensorSize[0] / 2     #add the information about where the center of the subarray is
         self.massCenterGlobal = self.massCenter[1] + centercoords2[1] #- subsizey - self.sensorSize[1] / 2     #add the information about where the center of the subarray is
-#        print(self.massCenter[1])
-#        print(self.massCenterGlobal)
-#        print(centercoords2[1])
-#        print('')
+        #print(self.massCenter[1])
+        #print(self.massCenterGlobal)
+        #print(centercoords2[1])
+        #print('')
         #print(self.massCenter2[1])
         #print('')
         self.focusSignal = self.massCenterGlobal
